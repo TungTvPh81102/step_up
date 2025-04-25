@@ -24,6 +24,7 @@ import {
   Spin,
   Badge,
   Empty,
+  Image,
 } from "antd";
 
 import {
@@ -112,6 +113,8 @@ const ProductEdit = () => {
       setLoading(true);
       const productData = await getProductDetail(id);
 
+      console.log("Product data:", productData);
+
       if (!productData) {
         message.error("Không tìm thấy thông tin sản phẩm");
         navigate("/admin/products");
@@ -173,12 +176,22 @@ const ProductEdit = () => {
 
         setSelectedSizeAttributes(sizeAttributes);
         setSelectedColorAttributes(colorAttributes);
-        setVariants(
-          productData.variants.map((variant) => ({
-            ...variant,
-            is_active: variant.is_active !== false, // Default to true if not explicitly false
-          }))
-        );
+        const variantsWithImageFiles = productData.variants.map((variant) => {
+          if (variant.image_url) {
+            return {
+              ...variant,
+              imageFile: {
+                uid: `${variant.id}-image`,
+                name: "variant-image.png",
+                status: "done",
+                url: variant.image_url,
+              },
+            };
+          }
+          return variant;
+        });
+
+        setVariants(variantsWithImageFiles);
       }
     } catch (error) {
       console.error("Lỗi khi lấy thông tin sản phẩm:", error);
@@ -231,6 +244,17 @@ const ProductEdit = () => {
       return false;
     }
 
+    if (hasVariants) {
+      for (const variant of variants) {
+        if (!variant.imageFile) {
+          message.error(
+            `Vui lòng tải lên ảnh cho biến thể ${variant.size} - ${variant.color}!`
+          );
+          return false;
+        }
+      }
+    }
+
     return true;
   };
 
@@ -264,12 +288,45 @@ const ProductEdit = () => {
         : Number(values.quantity);
 
       if (hasVariants && variants.length > 0) {
-        // Ensure variants have the right structure for Firebase
-        values.variants = variants.map((variant) => ({
-          ...variant,
-          product_id: id,
-          is_active: variant.is_active !== false,
-        }));
+        const processedVariants = await Promise.all(
+          variants.map(async (variant) => {
+            const processedVariant = {
+              id: variant.id,
+              size: variant.size,
+              color: variant.color,
+              colorCode: variant.colorCode || "",
+              sku: variant.sku,
+              price: variant.price,
+              quantity: variant.quantity,
+              is_active: variant.is_active !== false,
+              product_id: id,
+            };
+
+            if (variant.imageFile) {
+              const fileObj =
+                variant.imageFile.originFileObj || variant.imageFile;
+              if (fileObj instanceof File || fileObj instanceof Blob) {
+                try {
+                  processedVariant.imageUrl = await fileToBase64(fileObj);
+                } catch (error) {
+                  console.error(
+                    `Lỗi khi chuyển đổi ảnh biến thể ${variant.id} sang base64:`,
+                    error
+                  );
+                  processedVariant.imageUrl = "";
+                }
+              } else if (variant.imageFile.url) {
+                processedVariant.imageUrl = variant.imageFile.url;
+              }
+            } else if (variant.image_url) {
+              processedVariant.imageUrl = variant.image_url;
+            }
+
+            return processedVariant;
+          })
+        );
+
+        values.variants = processedVariants;
       } else {
         values.variants = [];
       }
@@ -347,6 +404,7 @@ const ProductEdit = () => {
             quantity: 1,
             is_active: true,
             product_id: id,
+            imageFile: null,
             attributes: {
               size: {
                 id: size.id,
@@ -427,6 +485,45 @@ const ProductEdit = () => {
 
   const expandedRowRender = (record) => {
     const columns = [
+      {
+        title: "Ảnh biến thể",
+        key: "variantImage",
+        render: (_, record) => {
+          console.log("Record:", record);
+          return (
+            <Upload
+              listType="picture-card"
+              maxCount={1}
+              fileList={record.imageFile ? [record.imageFile] : []}
+              beforeUpload={(file) => {
+                const isImage = file.type.startsWith("image/");
+                if (!isImage) {
+                  message.error("Bạn chỉ có thể tải lên file ảnh!");
+                  return Upload.LIST_IGNORE;
+                }
+                const isLt2M = file.size / 1024 / 1024 < 2;
+                if (!isLt2M) {
+                  message.error("Ảnh phải nhỏ hơn 2MB!");
+                  return Upload.LIST_IGNORE;
+                }
+                handleVariantChange(record.id, "imageFile", file);
+
+                file.url = URL.createObjectURL(file);
+
+                return false;
+              }}
+              onRemove={() => handleVariantChange(record.id, "imageFile", null)}
+            >
+              {!record.imageFile && (
+                <div>
+                  <PlusOutlined />
+                  <div style={{ marginTop: 8 }}>Tải lên</div>
+                </div>
+              )}
+            </Upload>
+          );
+        },
+      },
       {
         title: "Màu sắc",
         dataIndex: "color",
@@ -595,6 +692,22 @@ const ProductEdit = () => {
   ];
 
   const variantListColumns = [
+    {
+      title: "Ảnh sản phẩm",
+      dataIndex: "image_url",
+      key: "image_url",
+      render: (image_url) => (
+        <Image
+          style={{
+            objectFit: "cover",
+            borderRadius: 4,
+          }}
+          width={60}
+          height={60}
+          src={image_url ?? ""}
+        />
+      ),
+    },
     {
       title: "Kích thước",
       dataIndex: "size",
@@ -802,12 +915,7 @@ const ProductEdit = () => {
             }
             key="1"
           >
-            <Form
-              form={form}
-              layout="vertical"
-              requiredMark="optional"
-              style={{ padding: "8px 0" }}
-            >
+            <Form form={form} layout="vertical" style={{ padding: "8px 0" }}>
               <Card
                 title={
                   <Space>
@@ -1065,11 +1173,7 @@ const ProductEdit = () => {
                 style={{ marginBottom: "24px" }}
                 headStyle={{ backgroundColor: "#f5f5f5" }}
               >
-                <Form.Item
-                  label="Mô tả chi tiết"
-                  name="description"
-                
-                >
+                <Form.Item label="Mô tả chi tiết" name="description">
                   <div
                     className="rich-text-editor-container"
                     style={{ minHeight: "200px" }}

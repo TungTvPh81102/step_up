@@ -57,10 +57,8 @@ const AttributeSelectorModal = ({
       const data = await getAttributes();
       const filteredAttributes = data.filter((attr) =>
         attributeType === "size"
-          ? attr.name.toLowerCase().includes("size") ||
-            attr.name.toLowerCase().includes("kích")
-          : attr.name.toLowerCase().includes("color") ||
-            attr.name.toLowerCase().includes("màu")
+          ? attr.name.toLowerCase().includes("kích")
+          : attr.name.toLowerCase().includes("màu")
       );
       setAttributes(filteredAttributes);
 

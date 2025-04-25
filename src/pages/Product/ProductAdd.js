@@ -137,13 +137,24 @@ const ProductAdd = () => {
       return false;
     }
 
+    if (hasVariants) {
+      for (const variant of variants) {
+        if (!variant.imageFile) {
+          message.error(
+            `Vui lòng tải lên ảnh cho biến thể ${variant.size} - ${variant.color}!`
+          );
+          return false;
+        }
+      }
+    }
+
     return true;
   };
 
   const handleDescriptionChange = (value) => {
-  setDescription(value);
-  form.setFieldsValue({ description: value });
-};
+    setDescription(value);
+    form.setFieldsValue({ description: value });
+  };
 
   const handleSubmit = async () => {
     if (!validateImage() || !validateVariants()) {
@@ -173,7 +184,29 @@ const ProductAdd = () => {
         : Number(values.quantity);
 
       if (hasVariants && variants.length > 0) {
-        values.variants = variants;
+        values.variants = [...variants];
+        for (let i = 0; i < values.variants.length; i++) {
+          const variant = values.variants[i];
+
+          if (variant.imageFile) {
+            const fileObj =
+              variant.imageFile.originFileObj || variant.imageFile;
+
+            if (fileObj instanceof File || fileObj instanceof Blob) {
+              try {
+                values.variants[i].imageUrl = await fileToBase64(fileObj);
+              } catch (error) {
+                console.error(
+                  `Lỗi khi chuyển đổi ảnh biến thể ${variant.id} sang base64:`,
+                  error
+                );
+                values.variants[i].imageUrl = ""; 
+              }
+            } else if (variant.imageFile.url) {
+              values.variants[i].imageUrl = variant.imageFile.url;
+            }
+          }
+        }
 
         values.attributes = {
           sizes: selectedSizeAttributes.map((attr) => ({
@@ -265,6 +298,7 @@ const ProductAdd = () => {
             price: basePrice,
             quantity: 1,
             isActive: true,
+            imageFile: null,
           });
         }
       });
@@ -331,6 +365,42 @@ const ProductAdd = () => {
 
   const expandedRowRender = (record) => {
     const columns = [
+      {
+        title: "Ảnh biến thể",
+        key: "variantImage",
+        render: (_, record) => (
+          <Upload
+            listType="picture-card"
+            maxCount={1}
+            fileList={record.imageFile ? [record.imageFile] : []}
+            beforeUpload={(file) => {
+              const isImage = file.type.startsWith("image/");
+              if (!isImage) {
+                message.error("Bạn chỉ có thể tải lên file ảnh!");
+                return Upload.LIST_IGNORE;
+              }
+              const isLt2M = file.size / 1024 / 1024 < 2;
+              if (!isLt2M) {
+                message.error("Ảnh phải nhỏ hơn 2MB!");
+                return Upload.LIST_IGNORE;
+              }
+              handleVariantChange(record.id, "imageFile", file);
+
+              file.url = URL.createObjectURL(file);
+
+              return false;
+            }}
+            onRemove={() => handleVariantChange(record.id, "imageFile", null)}
+          >
+            {!record.imageFile && (
+              <div>
+                <PlusOutlined />
+                <div style={{ marginTop: 8 }}>Tải lên</div>
+              </div>
+            )}
+          </Upload>
+        ),
+      },
       {
         title: "Màu sắc",
         dataIndex: "color",

@@ -68,29 +68,41 @@ const HeaderComponent = ({ collapsed, setCollapsed }) => {
         display: "flex",
         alignItems: "center",
         justifyContent: "space-between",
+        position: "fixed",
+        top: 0,
+        left: collapsed ? 80 : 250, 
+        right: 0,
+        zIndex: 1001,
+        height: "64px",
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
+        transition: "left 0.3s",
       }}
     >
-      <Button
-        type="text"
-        icon={
-          collapsed ? (
-            <MenuUnfoldOutlined style={{ fontSize: "20px" }} />
-          ) : (
-            <MenuFoldOutlined style={{ fontSize: "20px" }} />
-          )
-        }
-        onClick={() => setCollapsed(!collapsed)}
-        style={{
-          width: "40px",
-          height: "40px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          color: "#595959",
-          transition: "all 0.3s",
-        }}
-        className="trigger"
-      />
+      <div className="flex items-center gap-2">
+        <Button
+          type="text"
+          icon={
+            collapsed ? (
+              <MenuUnfoldOutlined style={{ fontSize: "20px" }} />
+            ) : (
+              <MenuFoldOutlined style={{ fontSize: "20px" }} />
+            )
+          }
+          onClick={() => setCollapsed(!collapsed)}
+          style={{
+            width: "40px",
+            height: "40px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            color: "#595959",
+            transition: "all 0.3s",
+          }}
+          className="trigger"
+        />
+
+        <h1 className="font-bold text-xl mt-2">Xin chào: {user?.name ?? ""}</h1>
+      </div>
 
       {/* User Section */}
       {user && (
@@ -139,7 +151,9 @@ const HeaderComponent = ({ collapsed, setCollapsed }) => {
                     >
                       {user?.email}
                     </Text>
-                    <DownOutlined style={{ fontSize: "12px", color: "#595959" }} />
+                    <DownOutlined
+                      style={{ fontSize: "12px", color: "#595959" }}
+                    />
                   </>
                 )}
               </Space>

@@ -21,11 +21,7 @@ export const storeBrand = async (Brand) => {
     try {
         const docRef = await addDoc(collection(db, "brands"), Brand);
 
-        if (docRef.id) {
-            toast.success('Thao tác thành công')
-        }
-
-        return
+        return docRef.id
     } catch (error) {
         toast.error(error)
     }
@@ -34,7 +30,6 @@ export const storeBrand = async (Brand) => {
 export const deleteBrand = async (id) => {
     try {
         await deleteDoc(doc(db, "brands", id));
-        toast.success("Thao tác thành công");
     } catch (error) {
         toast.error("Lỗi khi xóa thương hiệu");
     }
@@ -44,7 +39,6 @@ export const updateBrand = async (id, updatedData) => {
     try {
         const BrandRef = doc(db, "brands", id);
         await updateDoc(BrandRef, updatedData);
-        toast.success("Thao tác thành công");
     } catch (error) {
         toast.error("Lỗi khi cập nhật thương hiệu");
     }

@@ -76,6 +76,13 @@ const App = () => {
                     onCollapse={setCollapsed}
                     theme="dark"
                     width={250}
+                    style={{
+                      position: "fixed",
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      zIndex: 1000,
+                    }}
                   >
                     <div
                       style={{
@@ -145,14 +152,28 @@ const App = () => {
                       })}
                     </Menu>
                   </Sider>
-                  <Layout>
+                  <Layout
+                    style={{
+                      marginLeft: collapsed ? 80 : 250,
+                      transition: "margin-left 0.2s",
+                    }}
+                  >
                     <HeaderComponent
                       collapsed={collapsed}
                       setCollapsed={setCollapsed}
                     />
-                    
-                    <Content style={{ margin: "16px" }}>
+
+                    <Content
+                      style={{
+                        margin: "80px 16px 16px 16px", 
+                        transition: "margin-left 0.3s",
+                      }}
+                    >
                       <Routes>
+                        <Route
+                          path="/"
+                          element={<Navigate to="/dashboard" replace />}
+                        />
                         <Route path="/dashboard" element={<Dashboard />} />
                         <Route path="/products" element={<Products />} />
                         <Route

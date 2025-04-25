@@ -119,9 +119,11 @@ export const storeProductFromFireBase = async (product) => {
     const batch = writeBatch(db);
 
     const variants = product.variants || [];
+
     const productAttributes = product.attributes || {};
 
     const productToStore = { ...product };
+    
     delete productToStore.variants;
     delete productToStore.attributes;
 
@@ -135,6 +137,7 @@ export const storeProductFromFireBase = async (product) => {
         price: variant.price,
         quantity: variant.quantity,
         is_active: variant.isActive || true,
+        image_url: variant.imageUrl  || "",
       };
 
       const variantRef = await addDoc(
@@ -314,6 +317,7 @@ export const updateProductInFireBase = async (id, product) => {
           price: variant.price,
           quantity: variant.quantity,
           is_active: variant.isActive || true,
+          image_url: variant.imageUrl 
         };
 
         batch.update(variantRef, variantToUpdate);
